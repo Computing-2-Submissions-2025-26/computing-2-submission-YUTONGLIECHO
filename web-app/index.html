@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en-gb">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chaos Gomoku</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="default.css">
+<script type="module" src="main.js"></script>
+
+<div id="crt" aria-hidden="true"></div>
+
+<!-- ============================== SPLASH SCREEN ============================= -->
+<section id="splash-screen" class="screen splash" aria-label="Title screen">
+    <div class="splash-audio">
+        <button id="mute-splash" type="button" class="ghost" aria-pressed="false">🔊 Sound</button>
+    </div>
+    <div class="splash-box">
+        <h1 class="title splash-title">CHAOS <span>GOMOKU</span></h1>
+        <p class="splash-sub">Department of Strategic Board Compliance</p>
+        <button id="begin-button" type="button" class="splash-press">PRESS ANY KEY TO BEGIN</button>
+        <p class="splash-foot">Click, tap, or press a key. Participation is, technically, voluntary.</p>
+    </div>
+</section>
+
+<!-- ============================== START SCREEN ============================== -->
+<section id="start-screen" class="screen" aria-label="Start menu" hidden>
+    <div class="menu-box">
+        <h1 class="title">CHAOS <span>GOMOKU</span></h1>
+        <p class="tagline">Five in a row. Physics optional.</p>
+
+        <fieldset class="menu-group">
+            <legend>Mode</legend>
+            <div class="mode-row">
+                <button id="mode-ai" type="button" class="mode-btn">
+                    <span class="mode-emoji">🤖</span>
+                    <span class="mode-name">Player vs AI</span>
+                    <span class="mode-tag">Beat a machine with confidence issues.</span>
+                </button>
+                <button id="mode-local" type="button" class="mode-btn">
+                    <span class="mode-emoji">🧑‍🤝‍🧑</span>
+                    <span class="mode-name">Local 2-player</span>
+                    <span class="mode-tag">Two humans, one device, several arguments.</span>
+                </button>
+            </div>
+        </fieldset>
+
+        <fieldset class="menu-group">
+            <legend>Player One character (Black)</legend>
+            <div class="char-picker">
+                <button id="char-prev" type="button" class="arrow" aria-label="Previous Player One character">◀</button>
+                <span class="avatar" id="pick-avatar">🔥</span>
+                <span class="pick-text">
+                    <span class="who-name" id="pick-name">Vex Cinder</span>
+                    <span class="desc" id="pick-desc"></span>
+                </span>
+                <button id="char-next" type="button" class="arrow" aria-label="Next Player One character">▶</button>
+            </div>
+        </fieldset>
+
+        <div class="mode-slot">
+            <fieldset id="difficulty-row" class="menu-group">
+                <legend>AI difficulty</legend>
+                <div class="diff-row" role="radiogroup" aria-label="AI difficulty">
+                    <button id="diff-easy" type="button" class="diff-btn">
+                        <span class="diff-emoji">🍞</span>
+                        <span class="diff-name">Sleepy Toaster</span>
+                        <span class="diff-tag">Easy</span>
+                    </button>
+                    <button id="diff-medium" type="button" class="diff-btn selected">
+                        <span class="diff-emoji">🐦</span>
+                        <span class="diff-name">Suspicious Pigeon</span>
+                        <span class="diff-tag">Medium</span>
+                    </button>
+                    <button id="diff-hard" type="button" class="diff-btn">
+                        <span class="diff-emoji">🧊</span>
+                        <span class="diff-name">Evil Refrigerator</span>
+                        <span class="diff-tag">Hard</span>
+                    </button>
+                </div>
+            </fieldset>
+
+            <fieldset class="menu-group" id="p2-group">
+                <legend>Player Two character (White)</legend>
+                <div class="char-picker">
+                    <button id="char2-prev" type="button" class="arrow" aria-label="Previous Player Two character">◀</button>
+                    <span class="avatar" id="pick2-avatar">📐</span>
+                    <span class="pick-text">
+                        <span class="who-name" id="pick2-name">Auditor Quill</span>
+                        <span class="desc" id="pick2-desc"></span>
+                    </span>
+                    <button id="char2-next" type="button" class="arrow" aria-label="Next Player Two character">▶</button>
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="menu-actions">
+            <button id="start-button" type="button" class="big">Start game</button>
+            <button id="howto-open" type="button" class="ghost">How to play</button>
+            <button id="mute-start" type="button" class="ghost" aria-pressed="false">🔊 Sound</button>
+        </div>
+    </div>
+</section>
+
+<!-- ============================ HOW TO PLAY MODAL =========================== -->
+<div id="howto-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="howto-title" hidden>
+    <div class="modal-box howto-box">
+        <h2 id="howto-title">How to play</h2>
+        <div class="howto-grid">
+            <div class="howto-col">
+                <p><b>Goal:</b> get five of your stones in a row — horizontal, vertical, or diagonal. Six or more (an overline) also wins.</p>
+                <p><b>Turns:</b> players alternate. On your turn, click an empty intersection to place one stone, then optionally fire one skill, then end your turn.</p>
+                <p><b>Placing:</b> click a crossing point, or move focus with the arrow keys and press Enter or Space.</p>
+                <p><b>Skills:</b> after placing, use one ready skill. Targeted skills (Yeet, Finders) need you to then click an enemy stone. Most skills end your turn and go on cooldown.</p>
+                <p><b>Modes:</b> in <b>Player vs AI</b> you are Black against the computer. In <b>Local 2-player</b> two humans share the device, Black then White.</p>
+            </div>
+            <ul class="howto-skills">
+                <li><img class="howto-icon" src="assets/skill-yeet.png" alt=""><span><b>Yeet Meteor</b> — remove an enemy stone. <i>(cd 5)</i></span></li>
+                <li><img class="howto-icon" src="assets/skill-finders.png" alt=""><span><b>Finders Keepers</b> — move an enemy stone to a random empty cell. <i>(cd 4)</i></span></li>
+                <li><img class="howto-icon" src="assets/skill-spring.png" alt=""><span><b>Spring Cleaning</b> — remove 1–3 random enemy stones. <i>(cd 7)</i></span></li>
+                <li><img class="howto-icon" src="assets/skill-zero.png" alt=""><span><b>Absolute Zero</b> — freeze the foe's skills next turn. <i>(cd 5)</i></span></li>
+                <li><img class="howto-icon" src="assets/skill-corporate.png" alt=""><span><b>Corporate</b> — swap every stone's colour. <i>(once)</i></span></li>
+                <li><img class="howto-icon" src="assets/skill-flip.png" alt=""><span><b>Table Flip</b> — clear the whole board. <i>(once)</i></span></li>
+            </ul>
+        </div>
+        <button id="howto-close" type="button">Close</button>
+    </div>
+</div>
+
+<!-- ============================== GAME OVER MODAL =========================== -->
+<div id="over-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="over-title" hidden>
+    <div class="modal-box over-box">
+        <h2 id="over-title">Game Over</h2>
+        <p id="over-result" class="over-result" aria-live="assertive"></p>
+        <div class="over-actions">
+            <button id="over-new" type="button" class="big">New game</button>
+            <button id="over-menu" type="button" class="ghost">Return to menu</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================== GAME SCREEN =============================== -->
+<div id="game-screen" hidden>
+    <header>
+        <h1 class="title small">CHAOS <span>GOMOKU</span></h1>
+        <div class="toolbar">
+            <button id="new-game" type="button">New game</button>
+            <button id="howto-game" type="button" class="ghost">How to play</button>
+            <button id="menu-button" type="button" class="ghost">Menu</button>
+            <span class="sound-control">
+                <button id="mute-game" type="button" class="ghost" aria-pressed="false">🔊 Sound</button>
+                <input id="volume" type="range" min="0" max="1" step="0.05" value="0.7" aria-label="Sound volume">
+            </span>
+        </div>
+    </header>
+
+    <div class="arena">
+        <aside class="player-panel" id="identity">
+            <h2>You — Black</h2>
+            <div class="who">
+                <span class="avatar" id="player-avatar">🔥</span>
+                <div class="who-text">
+                    <span class="who-name" id="player-name">Vex Cinder</span>
+                    <p class="desc" id="player-desc"></p>
+                </div>
+            </div>
+            <h3 class="mini-title">Skills</h3>
+            <div class="chip-row" id="skills-black" aria-label="Black's skills"></div>
+        </aside>
+
+        <main>
+            <div id="board-frame">
+                <div id="board" role="group" aria-label="Chaos Gomoku board">
+                    <div id="board-grid"></div>
+                </div>
+            </div>
+        </main>
+
+        <aside class="player-panel" id="opponent">
+            <h2>Foe — White</h2>
+            <div class="who">
+                <span class="avatar" id="foe-avatar">🤖</span>
+                <div class="who-text">
+                    <span class="who-name" id="foe-name">Professor Beep-Boop</span>
+                    <p class="desc" id="foe-desc"></p>
+                </div>
+            </div>
+            <h3 class="mini-title">Skills</h3>
+            <div class="chip-row" id="skills-white" aria-label="White's skills"></div>
+        </aside>
+    </div>
+
+    <div class="dock">
+        <div class="status-row">
+            <p id="status" aria-live="polite">Your turn — place a stone.</p>
+            <p id="message" class="message" aria-live="assertive"></p>
+        </div>
+        <div class="confirm-row">
+            <button id="end-turn" type="button" class="big">Confirm</button>
+        </div>
+        <section class="skill-dock" aria-label="Skills">
+            <div id="skill-list" class="skill-bar"></div>
+        </section>
+    </div>
+</div>

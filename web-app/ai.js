@@ -1,0 +1,292 @@
+import Chaos from "./ChaosGomoku.js";
+import Rng from "./rng.js";
+
+/**
+ * A small, pure computer opponent for Chaos Gomoku.
+ *
+ * The AI only reads the public {@link Chaos} API; it never touches game
+ * internals. Every choice is a pure function of the state and an injected
+ * random source, so the same inputs always produce the same move (tests inject
+ * a seeded {@link Rng.seeded}). It decides a placement first; the web app then
+ * asks for an optional skill and ends the turn.
+ *
+ * @namespace Ai
+ */
+const Ai = {};
+
+const N = Chaos.board_size;
+const CENTER = (N - 1) / 2;
+const DIRECTIONS = Object.freeze([[0, 1], [1, 0], [1, 1], [1, -1]]);
+
+const default_rng = Rng.math();
+
+const PRESETS = Object.freeze({
+    easy: Object.freeze({
+        aggression: 0.12,
+        block_prob: 0.6,
+        def_weight: 0.5,
+        jitter: 140,
+        radius: 1,
+        top_k: 8
+    }),
+    hard: Object.freeze({
+        aggression: 0.18,
+        block_prob: 1,
+        def_weight: 1.3,
+        jitter: 0,
+        radius: 2,
+        top_k: 1
+    }),
+    medium: Object.freeze({
+        aggression: 0.22,
+        block_prob: 1,
+        def_weight: 1.05,
+        jitter: 18,
+        radius: 2,
+        top_k: 3
+    })
+});
+
+/** The difficulty names this AI understands. @memberof Ai */
+Ai.difficulties = Object.freeze(["easy", "medium", "hard"]);
+
+const preset_for = function (difficulty) {
+    return PRESETS[difficulty] || PRESETS.medium;
+};
+
+const in_bounds = function (row, col) {
+    return row >= 0 && row < N && col >= 0 && col < N;
+};
+
+const other = function (side) {
+    return (
+        side === Chaos.player_one
+        ? Chaos.player_two
+        : Chaos.player_one
+    );
+};
+
+const line_value = function (open, run) {
+    if (run >= 5) {
+        return 1000000;
+    }
+    if (run === 4) {
+        return (
+            open === 2
+            ? 100000
+            : (
+                open === 1
+                ? 9000
+                : 0
+            )
+        );
+    }
+    if (run === 3) {
+        return (
+            open === 2
+            ? 1200
+            : (
+                open === 1
+                ? 180
+                : 0
+            )
+        );
+    }
+    if (run === 2) {
+        return (
+            open === 2
+            ? 90
+            : (
+                open === 1
+                ? 18
+                : 0
+            )
+        );
+    }
+    if (run === 1) {
+        return (
+            open === 2
+            ? 8
+            : 2
+        );
+    }
+    return 0;
+};
+
+const ray = function (board, side, row, col, drow, dcol) {
+    const walk = function (r, c, count) {
+        if (!in_bounds(r, c)) {
+            return [count, 0];
+        }
+        if (board[r][c] === side) {
+            return walk(r + drow, c + dcol, count + 1);
+        }
+        return [
+            count,
+            (
+                board[r][c] === Chaos.empty
+                ? 1
+                : 0
+            )
+        ];
+    };
+    return walk(row + drow, col + dcol, 0);
+};
+
+const line_pair = function (board, side, row, col, drow, dcol) {
+    const [forward_run, forward_open] = ray(board, side, row, col, drow, dcol);
+    const [back_run, back_open] = ray(board, side, row, col, -drow, -dcol);
+    return line_value(forward_open + back_open, 1 + forward_run + back_run);
+};
+
+const directional_total = function (board, side, row, col) {
+    return DIRECTIONS.reduce(function (sum, [drow, dcol]) {
+        return sum + line_pair(board, side, row, col, drow, dcol);
+    }, 0);
+};
+
+const score_cell = function (board, row, col, side, def_weight) {
+    const offence = directional_total(board, side, row, col);
+    const defence = directional_total(board, other(side), row, col);
+    const distance = Math.abs(row - CENTER) + Math.abs(col - CENTER);
+    return offence + defence * def_weight + (CENTER - distance / 2);
+};
+
+const candidate_cells = function (state, radius) {
+    const empties = Chaos.empty_cells(state);
+    const occupied = Chaos.pieces_of(state, Chaos.player_one).concat(
+        Chaos.pieces_of(state, Chaos.player_two)
+    );
+    if (occupied.length === 0) {
+        return [[CENTER, CENTER]];
+    }
+    return empties.filter(function ([row, col]) {
+        return occupied.some(function ([orow, ocol]) {
+            return Math.abs(row - orow) <= radius
+            && Math.abs(col - ocol) <= radius;
+        });
+    });
+};
+
+const stone_threat = function (board, side, row, col) {
+    return DIRECTIONS.reduce(function (best, [drow, dcol]) {
+        return Math.max(best, line_pair(board, side, row, col, drow, dcol));
+    }, 0);
+};
+
+const most_dangerous = function (state, side) {
+    const board = Chaos.board(state);
+    return Chaos.pieces_of(state, side).reduce(function (best, [row, col]) {
+        const value = stone_threat(board, side, row, col);
+        return (
+            value > best.value
+            ? {cell: [row, col], value}
+            : best
+        );
+    }, {cell: null, value: -1});
+};
+
+/**
+ * Choose where the side to move should place its stone.
+ * @memberof Ai
+ * @param {Chaos.State} state  The current state (side to move = the AI).
+ * @param {string} difficulty  "easy", "medium", or "hard".
+ * @param {Rng.Source} [rng]  Random source; defaults to Math.random.
+ * @returns {Array<number>} The chosen [row, col].
+ */
+Ai.choose_placement = function (state, difficulty, rng) {
+    const source = (
+        rng === undefined
+        ? default_rng
+        : rng
+    );
+    const preset = preset_for(difficulty);
+    const me = Chaos.current_player(state);
+    const foe = other(me);
+    const board = Chaos.board(state);
+    // Prefer cells near existing stones; if none qualify (a sparse, scattered
+    // board) fall back to ANY empty cell so the choice is always legal and the
+    // turn can never stall.
+    const near = candidate_cells(state, preset.radius);
+    const cells = (
+        near.length === 0
+        ? Chaos.empty_cells(state)
+        : near
+    );
+    if (cells.length === 0) {
+        return [CENTER, CENTER];
+    }
+    const winning = cells.find(function ([row, col]) {
+        return Chaos.would_win(state, me, row, col);
+    });
+    if (winning !== undefined) {
+        return winning;
+    }
+    const block = cells.find(function ([row, col]) {
+        return Chaos.would_win(state, foe, row, col);
+    });
+    if (block !== undefined && source.next() < preset.block_prob) {
+        return block;
+    }
+    const scored = cells.map(function ([row, col]) {
+        return {
+            cell: [row, col],
+            score: score_cell(board, row, col, me, preset.def_weight)
+            + source.next() * preset.jitter
+        };
+    });
+    const ranked = scored.slice().sort(function (left, right) {
+        return right.score - left.score;
+    });
+    const width = Math.max(1, Math.min(preset.top_k, ranked.length));
+    return source.pick(ranked.slice(0, width)).cell;
+};
+
+/**
+ * Choose an optional skill to use after placing, or null to skip. Mirrors the
+ * original game's defensive personality: dismantle big threats, occasionally
+ * apply pressure.
+ * @memberof Ai
+ * @param {Chaos.State} state  The state after the AI has placed.
+ * @param {string} difficulty  "easy", "medium", or "hard".
+ * @param {Rng.Source} [rng]  Random source; defaults to Math.random.
+ * @returns {(object|null)} A SKILL action, or null to use no skill.
+ */
+Ai.choose_skill = function (state, difficulty, rng) {
+    const source = (
+        rng === undefined
+        ? default_rng
+        : rng
+    );
+    const preset = preset_for(difficulty);
+    const me = Chaos.current_player(state);
+    const foe = other(me);
+    if (
+        !Chaos.has_placed(state)
+        || Chaos.is_frozen(state, me)
+        || Chaos.is_over(state)
+    ) {
+        return null;
+    }
+    const ready = function (id) {
+        return Chaos.skill_status(state, me, id).ready;
+    };
+    const danger = most_dangerous(state, foe);
+    if (danger.value >= 9000 && ready("yeet") && danger.cell !== null) {
+        return Chaos.use_skill("yeet", danger.cell);
+    }
+    if (
+        danger.value >= 1200
+        && ready("spring")
+        && Chaos.skill_usable(state, me, "spring")
+        && source.next() < 0.6
+    ) {
+        return Chaos.use_skill("spring");
+    }
+    if (ready("zero") && source.next() < preset.aggression) {
+        return Chaos.use_skill("zero");
+    }
+    return null;
+};
+
+export default Object.freeze(Ai);

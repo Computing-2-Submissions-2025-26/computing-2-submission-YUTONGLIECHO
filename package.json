@@ -1,0 +1,21 @@
+{
+  "name": "computing-2-submission",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Chaos Gomoku: five-in-a-row with chaotic skills.",
+  "main": "web-app/ChaosGomoku.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "test": "mocha",
+    "docs": "npx jsdoc -c jsdoc.json",
+    "serve": "npx http-server -p 8000 ."
+  },
+  "dependencies": {
+    "ramda": "^0.32.0"
+  },
+  "devDependencies": {
+    "docdash": "^2.0.2",
+    "mocha": "^11.7.5"
+  }
+}
