@@ -282,16 +282,16 @@ only for interest:
 
 ## AI Use Declaration
 
-I used an AI assistant (Claude) while preparing this submission, as a code
-reviewer and a tutor — not as an author of the game. It mainly helped me:
+I used an AI assistant (Claude) during the development of this project as a coding assistant, reviewer, and debugging aid.
 
-- check that the game logic and action validation are complete;
-- work through tooling and submission issues (configuration, repository
-  structure, and similar);
-- polish some code, generate the sound-effect code, and some of the visual
-  effects;
-- draft and refine the README and this declaration.
+It mainly helped me with:
 
-The core design and implementation of the game are my own. I understand and can
-explain all the code in this submission, and take full responsibility for the
-final work.
+* reviewing game logic and action validation;
+* discussing implementation ideas and edge cases;
+* debugging issues and resolving tooling/setup problems;
+* refining parts of the code structure and implementation;
+* generating some sound-effect code and visual effects;
+* improving documentation, including the README and this declaration.
+
+The game concept, rules, and overall direction of the project were developed by me. I made the final implementation decisions, integrated all components, tested the game, and understand the code submitted. I take full responsibility for the final submission.
+
